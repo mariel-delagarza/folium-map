@@ -68,7 +68,7 @@ folium.Choropleth(
     fill_opacity=0.7,
     line_opacity=0.2,
     # title of the legend
-    legend_name='New Cases Past 7 Days (Per 100K Population) ',
+    legend_name='2020 Exports of Coal to Canada',
     highlight=True,
     line_color='black').add_to(us_map)
 

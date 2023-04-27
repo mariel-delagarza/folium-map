@@ -1,4 +1,4 @@
-State,State_ID,Coal,Crude_Oil,Electricity,Fuel_Ethanol,Natural_Gas,RPP,Uranium,Grand_Total
+state,state_id,coal,crude_oil,electricity,fuel_ethanol,natural_gas,rpp,uranium,grand_total
 Alabama,0,4,10,0,0,0,3959499,7248,3966761
 Alaska,1,0,1091,0,0,0,44388658,24511,44414260
 Arizona,2,312643,210834,0,0,0,3366305,2187,3891968

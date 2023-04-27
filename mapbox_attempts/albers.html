@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Data join with feature state</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
+    <script src="https://d3js.org/d3-fetch.v1.min.js"></script>
+    <script src="https://d3js.org/d3-format.v1.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+  </body>
+  <script type="text/javascript">
+    mapboxgl.accessToken =
+      "pk.eyJ1IjoiaWxhYm1lZGlhIiwiYSI6ImNpbHYycXZ2bTAxajZ1c2tzdWU1b3gydnYifQ.AHxl8pPZsjsqoz95-604nw";
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/light-v11",
+      zoom: 3.8,
+      center: [-3.632, 0.339],
+    });
+
+    let hoveredStateId = null;
+
+    const popup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+    });
+
+    map.on("load", () => {
+      d3.csv("pol_influence_by_county_2012.csv").then((data) => {
+        initFeatureState(data);
+      });
+
+      const initFeatureState = (data) => {
+        map.addSource("albersusa", {
+          type: "vector",
+          url: "mapbox://lobenichou.albersusa",
+          promoteId: "county_fips",
+        });
+
+        map.addLayer({
+          id: "albersusa-fill",
+          type: "fill",
+          source: "albersusa",
+          "source-layer": "albersusa",
+          paint: {
+            "fill-color": [
+              "case",
+              ["!=", ["feature-state", "per_capita_contributions"], null],
+              [
+                "interpolate",
+                ["linear"],
+                ["to-number", ["feature-state", "per_capita_contributions"]],
+                0,
+                "#ece2f0",
+                // 5, '#a6bddb',
+                10,
+                "#1c9099",
+              ],
+              "rgb(140, 140, 140)",
+            ],
+          },
+          filter: ["==", ["get", "type"], "county"],
+        });
+
+        map.addLayer({
+          id: "albersusa-line",
+          type: "line",
+          source: "albersusa",
+          "source-layer": "albersusa",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#4b4b4b",
+            "line-width": [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              2,
+              0,
+            ],
+          },
+          filter: ["==", ["get", "type"], "county"],
+        });
+
+        map.on("mousemove", "albersusa-fill", (e) => {
+          if (e.features.length > 0) {
+            if (hoveredStateId) {
+              map.setFeatureState(
+                {
+                  source: "albersusa",
+                  sourceLayer: "albersusa",
+                  id: hoveredStateId,
+                },
+                {
+                  hover: false,
+                }
+              );
+            }
+            hoveredStateId = e.features[0].id;
+            map.setFeatureState(
+              {
+                source: "albersusa",
+                sourceLayer: "albersusa",
+                id: hoveredStateId,
+              },
+              {
+                hover: true,
+              }
+            );
+          }
+        });
+
+        map.on("mousemove", "albersusa-fill", (e) => {
+          map.getCanvas().style.cursor = "pointer";
+          const description = `
+        <p>County Name: ${e.features[0].properties.county_name}</p>
+        <p>County FIPS: ${e.features[0].properties.county_fips}</p>
+        <p>Feature ID: ${e.features[0].id}</p>
+        <p>Contributions:  ${d3.format("($.2f")(
+          e.features[0].state.per_capita_contributions
+        )} per capita</p>`;
+
+          popup.setLngLat(e.lngLat).setHTML(description).addTo(map);
+        });
+
+        map.on("mouseleave", "albersusa-fill", () => {
+          if (hoveredStateId) {
+            map.setFeatureState(
+              {
+                source: "albersusa",
+                sourceLayer: "albersusa",
+                id: hoveredStateId,
+              },
+              {
+                hover: false,
+              }
+            );
+          }
+          hoveredStateId = null;
+          map.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+
+        const setStates = (data) => {
+          data.forEach((row) => {
+            map.setFeatureState(
+              {
+                source: "albersusa",
+                sourceLayer: "albersusa",
+                id: row.state_county_code,
+              },
+              {
+                per_capita_contributions: row.per_capita_contributions,
+              }
+            );
+          });
+        };
+
+        const setAfterLoad = (e) => {
+          if (e.sourceId === "albersusa" && e.isSourceLoaded) {
+            setStates(data);
+            map.off("sourcedata", setAfterLoad);
+          }
+        };
+
+        if (map.isSourceLoaded("albersusa")) {
+          setStates(data);
+        } else {
+          map.on("sourcedata", setAfterLoad);
+        }
+      };
+    });
+  </script>
+</html>

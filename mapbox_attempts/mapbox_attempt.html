@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Add a polygon to a map using a GeoJSON source</title>
+    <meta name="viewport" content="initial-scale=1,width=device-width" />
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaWxhYm1lZGlhIiwiYSI6ImNpbHYycXZ2bTAxajZ1c2tzdWU1b3gydnYifQ.AHxl8pPZsjsqoz95-604nw";
+      const map = new mapboxgl.Map({
+        container: "map", // container ID
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: "mapbox://styles/mapbox/light-v11", // style URL
+        projection: "mercator",
+        center: [-103.296, 42.639], // starting position
+        zoom: 3, // starting zoom
+      });
+
+      map.on("load", () => {
+        // Add a data source containing GeoJSON data.sta
+        map.addSource("states", {
+          type: "geojson",
+          data: "./states.geojson",
+        });
+
+        // Add a new layer to visualize the polygon.
+        map.addLayer({
+          id: "states-fill",
+          type: "fill",
+          source: "states", // reference the data source
+          layout: {},
+          paint: {
+            "fill-color": "#0080ff", // blue color fill
+            "fill-opacity": 0.5,
+          },
+        });
+        // Add a black outline around the polygon.
+        map.addLayer({
+          id: "outline",
+          type: "line",
+          source: "states",
+          layout: {},
+          paint: {
+            "line-color": "#000",
+            "line-width": 0.5,
+          },
+        });
+      });
+
+      const fetchData = () => {
+        return fetch(
+          "https://sheets.googleapis.com/v4/spreadsheets/1mxPzPv9ypU0b_Ciy8UV3ZF5ZWoc1mqbnVEtW7t5RM78/values/Commodity_Exports!A1:J?key=AIzaSyAImbihK2tiRewSFzuJTF_lcgPlGSr7zcg"
+        ).then((response) => response.json());
+      };
+
+      /*fetchData().then((result) => {
+        console.log(result);
+        let csvParse = Papa.unparse(result.values);
+        let finalParse = Papa.parse(csvParse, {
+          header: true,
+        });
+
+        console.log(finalParse.data);
+      });*/
+
+      const parseToJson = (result) => {
+        console.log(result.values);
+        let csvParse = Papa.unparse(result.values);
+        let finalParse = Papa.parse(csvParse, {
+          header: true,
+        });
+        return finalParse.data;
+      };
+
+      let data = fetchData().then((result) => parseToJson(result));
+      //console.log(data);
+    </script>
+  </body>
+</html>

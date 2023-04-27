@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Data Joins</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.0.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.0.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .mapboxgl-popup {
+        max-width: 400px;
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+      }
+
+      .mapboxgl-popup {
+        max-width: 400px;
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+
+    <script>
+      const fetchData = () => {
+        return fetch(
+          "https://sheets.googleapis.com/v4/spreadsheets/1mxPzPv9ypU0b_Ciy8UV3ZF5ZWoc1mqbnVEtW7t5RM78/values/Commodity_Exports!A1:J?key=AIzaSyAImbihK2tiRewSFzuJTF_lcgPlGSr7zcg"
+        ).then((response) => response.json());
+      };
+
+      const parseToJson = (result) => {
+        let csvParse = Papa.unparse(result.values);
+        let finalParse = Papa.parse(csvParse, {
+          header: true,
+        });
+        return finalParse.data;
+      };
+
+      let data = fetchData().then((result) => parseToJson(result));
+      //YOUR TURN: Replace with your Mapbox Token
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaWxhYm1lZGlhIiwiYSI6ImNpbHYycXZ2bTAxajZ1c2tzdWU1b3gydnYifQ.AHxl8pPZsjsqoz95-604nw";
+      var map = new mapboxgl.Map({
+        container: "map", // container ID
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: "mapbox://styles/mapbox/light-v11", // style URL
+        projection: "mercator",
+        center: [-103.296, 42.639], // starting position
+        zoom: 3, // starting zoom
+      });
+
+      map.on("load", function () {
+        data.then(function (results) {
+          console.log(results);
+          results.forEach((row) => {
+            map.setFeatureState(
+              {
+                //YOUR TURN: Replace with your source tileset and source layer
+                source: "states",
+                sourceLayer: "states",
+                //YOUR TURN: Replace with unqiue ID row name
+                id: row.State_ID,
+              },
+              //YOUR TURN: Add rows you want to style/interact with
+              {
+                coal: row.Coal,
+              }
+            );
+          });
+        });
+
+        //YOUR TURN: Add source layer
+        map.addSource("states", {
+          type: "geojson",
+          data: "./states.geojson",
+          promoteID: "id",
+        });
+
+        map.addLayer({
+          id: "states",
+          type: "fill",
+          source: "states", // reference the data source
+          layout: {},
+          paint: {
+            "fill-color": {
+              property: "coal",
+              stops: [
+                [11000, "#53dbf2 "],
+                [30000, "#60efff"],
+                [90000, "#4B82ED"],
+                [500000, "#4B82ED"],
+                [1000000, "#4328E7"],
+              ],
+            },
+          },
+        });
+
+        map.addLayer({
+          id: "outline",
+          type: "line",
+          source: "states",
+          layout: {},
+          paint: {
+            "line-color": "#000",
+            "line-width": 0.5,
+          },
+        });
+      });
+
+      var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
+
+      map.on("mousemove", "states", function (e) {
+        map.getCanvas().style.cursor = "pointer";
+
+        var district = map.queryRenderedFeatures(e.point, {
+          layers: ["states"],
+        });
+
+        var props = district[0].properties;
+
+        var state = district[0].state;
+
+        var content = "<b>" + "District Details" + "</b>" + "<br>";
+        content += "Representative: " + state.candidate + "<br>";
+        popup.setLngLat(e.lngLat).setHTML(content).addTo(map);
+      });
+
+      map.on("mouseleave", "states", function () {
+        map.getCanvas().style.cursor = "";
+        popup.remove();
+      });
+
+      function transformRequest(url, resourceType) {
+        var isMapboxRequest =
+          url.slice(8, 22) === "api.mapbox.com" ||
+          url.slice(10, 26) === "tiles.mapbox.com";
+        return {
+          url: isMapboxRequest
+            ? url.replace("?", "?pluginName=dataJoins&")
+            : url,
+        };
+      }
+      function papaPromise(url) {
+        return new Promise(function (resolve, reject) {
+          Papa.parse(url, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: resolve,
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

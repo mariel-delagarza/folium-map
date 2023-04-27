@@ -16589,6 +16589,7 @@
     },
     {
       "type": "Feature",
+      "state_id": 51,
       "properties": { "id": 51, "NAME": "Wisconsin" },
       "geometry": {
         "type": "MultiPolygon",
@@ -16935,6 +16936,7 @@
     },
     {
       "type": "Feature",
+      "state_id": 52,
       "properties": { "id": 52, "NAME": "Wyoming" },
       "geometry": {
         "type": "MultiPolygon",
